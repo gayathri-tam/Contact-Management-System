@@ -1,4 +1,4 @@
-# Content-Management
+# Contact-Management
 
 A full-stack Contact Management Application built with React Native, Expo, FastAPI, and MongoDB Atlas.
 
