@@ -48,13 +48,16 @@ export default function HomeScreen() {
   // =========================
 
   useEffect(() => {
-    axios
-      .get(API_URL, {
-        auth: {
-          username: AUTH_USERNAME,
-          password: AUTH_PASSWORD,
-        },
-      })
+  console.log('FRONTEND CODE RUNNING - PASSWORD:', AUTH_PASSWORD);
+  setContacts([]);
+
+  axios
+    .get(API_URL, {
+      auth: {
+        username: AUTH_USERNAME,
+        password: AUTH_PASSWORD,
+      },
+    })
       .then((response) => {
         console.log(response);
         console.log("========================================================");
