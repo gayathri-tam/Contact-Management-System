@@ -1,14 +1,62 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field, EmailStr
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pymongo import MongoClient, ReturnDocument
+from dotenv import load_dotenv
 import os
+import secrets
+
+
+# Load .env FIRST
+load_dotenv()
 
 
 app = FastAPI()
 
 
+# =========================
+# HTTP BASIC AUTHENTICATION
+# =========================
+
+security = HTTPBasic()
+
+AUTH_USERNAME = os.getenv("AUTH_USERNAME")
+AUTH_PASSWORD = os.getenv("AUTH_PASSWORD")
+
+if not AUTH_USERNAME or not AUTH_PASSWORD:
+    raise RuntimeError(
+        "AUTH_USERNAME or AUTH_PASSWORD environment variable is not set"
+    )
+
+
+def authenticate(
+    credentials: HTTPBasicCredentials = Depends(security)
+):
+    correct_username = secrets.compare_digest(
+        credentials.username,
+        AUTH_USERNAME
+    )
+
+    correct_password = secrets.compare_digest(
+        credentials.password,
+        AUTH_PASSWORD
+    )
+
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    return credentials.username
+
+
+# =========================
 # CORS
+# =========================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,19 +66,30 @@ app.add_middleware(
 )
 
 
-# MongoDB connection
+# =========================
+# MONGODB CONNECTION
+# =========================
+
 MONGODB_URL = os.getenv("MONGODB_URL")
 
 if not MONGODB_URL:
-    raise RuntimeError("MONGODB_URL environment variable is not set")
+    raise RuntimeError(
+        "MONGODB_URL environment variable is not set"
+    )
 
 
 client = MongoClient(MONGODB_URL)
 
 db = client["contacts_db"]
+
 contacts_collection = db["contacts"]
+
 counters_collection = db["counters"]
 
+
+# =========================
+# CONTACT MODEL
+# =========================
 
 class Contact(BaseModel):
     first_name: str = Field(
@@ -48,14 +107,26 @@ class Contact(BaseModel):
     )
 
 
+# =========================
+# HOME
+# =========================
+
 @app.get("/")
 def home():
-    return {"message": "Contact API is running"}
+    return {
+        "message": "Contact API is running"
+    }
 
 
+# =========================
 # CREATE
+# =========================
+
 @app.post("/contacts")
-def create_contact(contact: Contact):
+def create_contact(
+    contact: Contact,
+    username: str = Depends(authenticate)
+):
 
     counter = counters_collection.find_one_and_update(
         {"_id": "contact_id"},
@@ -82,9 +153,14 @@ def create_contact(contact: Contact):
     }
 
 
+# =========================
 # READ ALL
+# =========================
+
 @app.get("/contacts")
-def get_contacts():
+def get_contacts(
+    username: str = Depends(authenticate)
+):
 
     contacts = list(
         contacts_collection.find(
@@ -96,9 +172,15 @@ def get_contacts():
     return contacts
 
 
+# =========================
 # READ ONE
+# =========================
+
 @app.get("/contacts/{contact_id}")
-def get_contact(contact_id: int):
+def get_contact(
+    contact_id: int,
+    username: str = Depends(authenticate)
+):
 
     contact = contacts_collection.find_one(
         {"id": contact_id},
@@ -114,11 +196,15 @@ def get_contact(contact_id: int):
     )
 
 
+# =========================
 # UPDATE
+# =========================
+
 @app.put("/contacts/{contact_id}")
 def update_contact(
     contact_id: int,
-    contact: Contact
+    contact: Contact,
+    username: str = Depends(authenticate)
 ):
 
     updated_contact = contacts_collection.find_one_and_update(
@@ -149,9 +235,15 @@ def update_contact(
     )
 
 
+# =========================
 # DELETE
+# =========================
+
 @app.delete("/contacts/{contact_id}")
-def delete_contact(contact_id: int):
+def delete_contact(
+    contact_id: int,
+    username: str = Depends(authenticate)
+):
 
     result = contacts_collection.delete_one(
         {"id": contact_id}
@@ -167,6 +259,7 @@ def delete_contact(contact_id: int):
         status_code=404,
         detail="Contact not found"
     )
+
 
 
 
