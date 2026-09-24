@@ -22,7 +22,7 @@ const API_URL =
   'https://fastapi-contact-api-7bqo.onrender.com/contacts';
 
 const AUTH_USERNAME = 'admin';
-const AUTH_PASSWORD = 'wrongpassword';
+const AUTH_PASSWORD = 'wrongpas';
 
 export default function HomeScreen() {
   // =========================
