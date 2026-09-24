@@ -19,10 +19,10 @@ type Contact = {
 };
 
 const API_URL =
-  'https://fastapi-contact-api-7bqo.onrender.com/contacts';
+  'https://contact-management-system-1-71qb.onrender.com/contacts';
 
 const AUTH_USERNAME = 'admin';
-const AUTH_PASSWORD = 'wrongpas';
+const AUTH_PASSWORD = 'wrongpassword';
 
 export default function HomeScreen() {
   // =========================
