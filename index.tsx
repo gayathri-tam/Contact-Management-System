@@ -30,6 +30,7 @@ export default function HomeScreen() {
   // =========================
 
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Contact | null>(null);
@@ -50,7 +51,7 @@ export default function HomeScreen() {
   useEffect(() => {
   console.log('FRONTEND CODE RUNNING - PASSWORD:', AUTH_PASSWORD);
   setContacts([]);
-
+  setErrorMessage('');
   axios
     .get(API_URL, {
       auth: {
@@ -81,10 +82,10 @@ export default function HomeScreen() {
         setContacts([]);
 
         if (error.response?.status === 401) {
-          window.alert('Authentication failed: Invalid username or password.');
+          setErrorMessage('Authentication failed: Invalid username or password.');
         } else {
-          window.alert('Failed to load contacts.');
-        }
+          setErrorMessage('Failed to load contacts.');
+        }  
       });
   }, []);
 
