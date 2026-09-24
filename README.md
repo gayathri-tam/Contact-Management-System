@@ -91,6 +91,28 @@ Delete:
 
 React Native → Axios → FastAPI DELETE → MongoDB
 
+## Authentication
+
+The application uses HTTP Basic Authentication between the React Native frontend and the FastAPI backend.
+
+### Backend Authentication
+
+The FastAPI backend protects all contact CRUD endpoints with HTTP Basic Authentication.
+
+Protected endpoints:
+
+- GET `/contacts`
+- POST `/contacts`
+- GET `/contacts/{contact_id}`
+- PUT `/contacts/{contact_id}`
+- DELETE `/contacts/{contact_id}`
+
+The backend reads the authentication credentials from environment variables:
+
+```env
+AUTH_USERNAME=admin
+AUTH_PASSWORD=your_password
+
 ## License
 
 This project is licensed under the MIT License.
