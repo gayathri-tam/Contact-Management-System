@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -49,19 +48,19 @@ export default function HomeScreen() {
   // =========================
 
   useEffect(() => {
-  console.log('FRONTEND CODE RUNNING - PASSWORD:', AUTH_PASSWORD);
-  setContacts([]);
-  setErrorMessage('');
-  axios
-    .get(API_URL, {
-      auth: {
-        username: AUTH_USERNAME,
-        password: AUTH_PASSWORD,
-      },
-    })
+    setContacts([]);
+    setErrorMessage('');
+
+    axios
+      .get(API_URL, {
+        auth: {
+          username: AUTH_USERNAME,
+          password: AUTH_PASSWORD,
+        },
+      })
       .then((response) => {
-        console.log(response);
-        console.log("========================================================");
+        console.log('GET CONTACTS RESPONSE:', response.data);
+
         const formattedContacts = response.data.map(
           (contact: any) => ({
             id: contact.id,
@@ -77,15 +76,15 @@ export default function HomeScreen() {
       .catch((error: any) => {
         console.error('Failed to fetch contacts:', error);
 
-        // Clear the table when authentication fails
-        // so old records are never displayed with invalid credentials.
         setContacts([]);
 
         if (error.response?.status === 401) {
-          setErrorMessage('Authentication failed: Invalid username or password.');
+          setErrorMessage(
+            'Authentication failed: Invalid username or password.'
+          );
         } else {
           setErrorMessage('Failed to load contacts.');
-        }  
+        }
       });
   }, []);
 
@@ -98,6 +97,7 @@ export default function HomeScreen() {
       return;
     }
 
+    setErrorMessage('');
     setIsAdding(true);
 
     setNewContact({
@@ -119,7 +119,13 @@ export default function HomeScreen() {
     });
   };
 
+  // =========================
+  // CREATE USER
+  // =========================
+
   const handleCreate = async () => {
+    setErrorMessage('');
+
     try {
       const response = await axios.post(
         API_URL,
@@ -156,19 +162,64 @@ export default function HomeScreen() {
     } catch (error: any) {
       console.error('Create failed:', error);
 
+      // =========================
+      // AUTHENTICATION ERROR
+      // =========================
+
       if (error.response?.status === 401) {
         setContacts([]);
-        window.alert('Authentication failed: Invalid username or password.');
+
+        setErrorMessage(
+          'Authentication failed: Invalid username or password.'
+        );
+
         return;
       }
 
+      // =========================
+      // VALIDATION ERROR
+      // =========================
+
+      if (error.response?.status === 422) {
+        const validationErrors =
+          error.response.data?.detail;
+
+        if (Array.isArray(validationErrors)) {
+          const messages = validationErrors.map(
+            (item: any) => {
+              const field =
+                item.loc?.[1] || 'Field';
+
+              const message =
+                item.msg || 'Invalid value';
+
+              return `${field}: ${message}`;
+            }
+          );
+
+          setErrorMessage(
+            `Validation Error:\n${messages.join('\n')}`
+          );
+        } else {
+          setErrorMessage(
+            'Validation failed. Please check your input.'
+          );
+        }
+
+        return;
+      }
+
+      // =========================
+      // OTHER ERROR
+      // =========================
+
       if (error.response) {
-        window.alert(
-          `Create failed\n\nStatus: ${error.response.status}`
+        setErrorMessage(
+          `Create failed. Status: ${error.response.status}`
         );
       } else {
-        window.alert(
-          `Create failed\n\n${error.message}`
+        setErrorMessage(
+          `Create failed: ${error.message}`
         );
       }
     }
@@ -179,6 +230,7 @@ export default function HomeScreen() {
   // =========================
 
   const handleEdit = (contact: Contact) => {
+    setErrorMessage('');
     setEditingId(contact.id);
     setEditData({ ...contact });
   };
@@ -188,10 +240,16 @@ export default function HomeScreen() {
     setEditData(null);
   };
 
+  // =========================
+  // SAVE EDIT
+  // =========================
+
   const handleSave = async () => {
     if (!editData) {
       return;
     }
+
+    setErrorMessage('');
 
     try {
       await axios.put(
@@ -223,23 +281,55 @@ export default function HomeScreen() {
     } catch (error: any) {
       console.error('Update failed:', error);
 
+      // Authentication error
       if (error.response?.status === 401) {
         setContacts([]);
-        window.alert('Authentication failed: Invalid username or password.');
+
+        setErrorMessage(
+          'Authentication failed: Invalid username or password.'
+        );
+
         return;
       }
 
+      // Validation error
+      if (error.response?.status === 422) {
+        const validationErrors =
+          error.response.data?.detail;
+
+        if (Array.isArray(validationErrors)) {
+          const messages = validationErrors.map(
+            (item: any) => {
+              const field =
+                item.loc?.[1] || 'Field';
+
+              const message =
+                item.msg || 'Invalid value';
+
+              return `${field}: ${message}`;
+            }
+          );
+
+          setErrorMessage(
+            `Validation Error:\n${messages.join('\n')}`
+          );
+        } else {
+          setErrorMessage(
+            'Validation failed. Please check your input.'
+          );
+        }
+
+        return;
+      }
+
+      // Other error
       if (error.response) {
-        window.alert(
-          `Update failed\n\nStatus: ${error.response.status}\n\n${JSON.stringify(
-            error.response.data,
-            null,
-            2
-          )}`
+        setErrorMessage(
+          `Update failed. Status: ${error.response.status}`
         );
       } else {
-        window.alert(
-          `Update failed\n\n${error.message}`
+        setErrorMessage(
+          `Update failed: ${error.message}`
         );
       }
     }
@@ -257,6 +347,8 @@ export default function HomeScreen() {
     if (!confirmed) {
       return;
     }
+
+    setErrorMessage('');
 
     axios
       .delete(`${API_URL}/${id}`, {
@@ -277,9 +369,14 @@ export default function HomeScreen() {
 
         if (error.response?.status === 401) {
           setContacts([]);
-          window.alert('Authentication failed: Invalid username or password.');
+
+          setErrorMessage(
+            'Authentication failed: Invalid username or password.'
+          );
         } else {
-          window.alert('Failed to delete contact');
+          setErrorMessage(
+            'Failed to delete contact.'
+          );
         }
       });
   };
@@ -290,6 +387,9 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+
+      {/* HEADER */}
+
       <View style={styles.header}>
         <Text style={styles.title}>
           Contact Management
@@ -304,9 +404,20 @@ export default function HomeScreen() {
               Add User
             </Text>
           </Pressable>
-
         </View>
       </View>
+
+      {/* ERROR MESSAGE */}
+
+      {errorMessage !== '' && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>
+            {errorMessage}
+          </Text>
+        </View>
+      )}
+
+      {/* TABLE */}
 
       <ScrollView
         style={styles.verticalScroll}
@@ -317,16 +428,30 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={true}
         >
           <View style={styles.table}>
+
             {/* TABLE HEADER */}
 
             <View style={styles.headerRow}>
-              <Text style={styles.headerCell}>ID</Text>
-              <Text style={styles.headerCell}>First Name</Text>
-              <Text style={styles.headerCell}>Last Name</Text>
-              <Text style={styles.headerCell}>Email</Text>
+              <Text style={styles.headerCell}>
+                ID
+              </Text>
+
+              <Text style={styles.headerCell}>
+                First Name
+              </Text>
+
+              <Text style={styles.headerCell}>
+                Last Name
+              </Text>
+
+              <Text style={styles.headerCell}>
+                Email
+              </Text>
+
               <Text style={styles.headerCell}>
                 Contact Number
               </Text>
+
               <Text style={styles.headerCell}>
                 Actions
               </Text>
@@ -336,7 +461,10 @@ export default function HomeScreen() {
 
             {isAdding && (
               <View style={styles.row}>
-                <Text style={styles.cell}>New</Text>
+
+                <Text style={styles.cell}>
+                  New
+                </Text>
 
                 <TextInput
                   style={styles.input}
@@ -387,6 +515,7 @@ export default function HomeScreen() {
                 />
 
                 <View style={styles.actions}>
+
                   <Pressable
                     style={styles.saveButton}
                     onPress={handleCreate}
@@ -404,7 +533,9 @@ export default function HomeScreen() {
                       Cancel
                     </Text>
                   </Pressable>
+
                 </View>
+
               </View>
             )}
 
@@ -419,12 +550,16 @@ export default function HomeScreen() {
                   style={styles.row}
                   key={contact.id}
                 >
+
                   <Text style={styles.cell}>
                     {contact.id}
                   </Text>
 
                   {isEditing && editData ? (
                     <>
+
+                      {/* FIRST NAME */}
+
                       <TextInput
                         style={styles.input}
                         value={editData.firstName}
@@ -435,6 +570,8 @@ export default function HomeScreen() {
                           })
                         }
                       />
+
+                      {/* LAST NAME */}
 
                       <TextInput
                         style={styles.input}
@@ -447,6 +584,8 @@ export default function HomeScreen() {
                         }
                       />
 
+                      {/* EMAIL */}
+
                       <TextInput
                         style={styles.input}
                         value={editData.email}
@@ -457,6 +596,8 @@ export default function HomeScreen() {
                           })
                         }
                       />
+
+                      {/* CONTACT NUMBER */}
 
                       <TextInput
                         style={styles.input}
@@ -469,7 +610,10 @@ export default function HomeScreen() {
                         }
                       />
 
+                      {/* ACTIONS */}
+
                       <View style={styles.actions}>
+
                         <Pressable
                           style={styles.saveButton}
                           onPress={handleSave}
@@ -487,27 +631,41 @@ export default function HomeScreen() {
                             Cancel
                           </Text>
                         </Pressable>
+
                       </View>
+
                     </>
                   ) : (
                     <>
+
+                      {/* FIRST NAME */}
+
                       <Text style={styles.cell}>
                         {contact.firstName}
                       </Text>
+
+                      {/* LAST NAME */}
 
                       <Text style={styles.cell}>
                         {contact.lastName}
                       </Text>
 
+                      {/* EMAIL */}
+
                       <Text style={styles.cell}>
                         {contact.email}
                       </Text>
+
+                      {/* CONTACT NUMBER */}
 
                       <Text style={styles.cell}>
                         {contact.contactNumber}
                       </Text>
 
+                      {/* ACTIONS */}
+
                       <View style={styles.actions}>
+
                         <Pressable
                           style={styles.editButton}
                           onPress={() =>
@@ -529,20 +687,30 @@ export default function HomeScreen() {
                             Delete
                           </Text>
                         </Pressable>
+
                       </View>
+
                     </>
                   )}
+
                 </View>
               );
             })}
+
           </View>
         </ScrollView>
       </ScrollView>
+
     </View>
   );
 }
 
+// =========================
+// STYLES
+// =========================
+
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     padding: 20,
@@ -568,13 +736,6 @@ const styles = StyleSheet.create({
 
   addButton: {
     backgroundColor: '#2196F3',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-
-  logoutButton: {
-    backgroundColor: '#555',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 6,
@@ -664,6 +825,25 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+
+  // =========================
+  // ERROR MESSAGE
+  // =========================
+
+  errorBox: {
+    backgroundColor: '#ffebee',
+    borderWidth: 1,
+    borderColor: '#f44336',
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 15,
+  },
+
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
+    lineHeight: 22,
   },
 
 });
