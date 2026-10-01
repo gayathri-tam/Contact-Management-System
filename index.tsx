@@ -295,32 +295,48 @@ export default function HomeScreen() {
       // Validation error
       if (error.response?.status === 422) {
         const validationErrors =
-          error.response.data?.detail;
+        error.response.data?.detail;
 
-        if (Array.isArray(validationErrors)) {
-          const messages = validationErrors.map(
-            (item: any) => {
-              const field =
-                item.loc?.[1] || 'Field';
+      if (Array.isArray(validationErrors)) {
+        const messages = validationErrors.map(
+          (item: any) => {
+            const field = item.loc?.[1];
 
-              const message =
-                item.msg || 'Invalid value';
-
-              return `${field}: ${message}`;
+            if (field === 'first_name') {
+              return 'First name can contain lowercase letters only.';
             }
-          );
 
-          setErrorMessage(
-            `Validation Error:\n${messages.join('\n')}`
-          );
-        } else {
-          setErrorMessage(
-            'Validation failed. Please check your input.'
-          );
-        }
+            if (field === 'last_name') {
+              return 'Last name can contain lowercase letters only.';
+            }
 
-        return;
+            if (field === 'email') {
+              return 'Please enter a valid email address.';
+            }
+
+            if (field === 'contact_number') {
+              return 'Contact number can contain numbers only.';
+            }
+
+            return 'Please check the entered details.';
       }
+    );
+
+    setErrorMessage(
+      `Please fix the following:\n\n• ${messages.join(
+        '\n• '
+      )}`
+    );
+
+    return;
+  }
+
+  setErrorMessage(
+    'Please check your details and try again.'
+  );
+
+  return;
+}
 
       // Other error
       if (error.response) {
